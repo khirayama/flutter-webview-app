@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <title>Sample</title>
+  </head>
+
+  <body>
+    <h1>Sample</h1>
+    <div class="container">no message</div>
+    <button>Back to App</button>
+    <script type="text/javascript">
+      const el = window.document.querySelector('.container');
+
+      window.addEventListener('app:message', (e) => {
+        // el.innerText = e.detail.message;
+        el.innerText = JSON.stringify(e.detail);
+      });
+
+      const button = window.document.querySelector('button');
+      button.addEventListener('click', () => {
+        app.postMessage(JSON.stringify({ text: 'Text from WebView' }));
+      });
+    </script>
+  </body>
+</html>
