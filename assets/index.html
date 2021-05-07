@@ -6,19 +6,41 @@
 
   <body>
     <h1>Sample</h1>
-    <div class="container">no message</div>
     <button>Back to App</button>
+    <button class="download">Download Locations as JSON</button>
+    <div class="container">no message</div>
     <script type="text/javascript">
+      const logs = [];
+      let locations = [];
       const el = window.document.querySelector('.container');
 
       window.addEventListener('app:message', (e) => {
+        const action = e.detail;
+        // logs.push(e.detail);
         // el.innerText = e.detail.message;
-        el.innerText = JSON.stringify(e.detail);
+        // el.innerText = JSON.stringify(logs);
+        if (action.type === 'locationchange') {
+          locations = action.payload.locations;
+          el.innerText = JSON.stringify(locations);
+        }
       });
 
       const button = window.document.querySelector('button');
       button.addEventListener('click', () => {
         app.postMessage(JSON.stringify({ text: 'Text from WebView' }));
+      });
+
+      const donwloadButton = window.document.querySelector('.download');
+      donwloadButton.addEventListener('click', () => {
+        const blob = new Blob([JSON.stringify(locations)], {type: 'application\/json'});
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'sample.json';
+        link.click();
+
+        URL.revokeObjectURL(url);
       });
     </script>
   </body>
