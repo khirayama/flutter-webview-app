@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:location/location.dart';
 
 
+List locations = [];
+
 void main() => runApp(MaterialApp(home:WebViewExample()));
 
 class WebViewExample extends StatefulWidget {
@@ -16,6 +18,12 @@ class WebViewExample extends StatefulWidget {
 
 class _WebViewExampleState extends State<WebViewExample> {
   WebViewController _controller;
+
+  Location _location;
+
+  bool _serviceEnabled;
+
+  PermissionStatus _permissionGranted;
 
   @override
   Widget build(BuildContext context) {
@@ -29,30 +37,38 @@ class _WebViewExampleState extends State<WebViewExample> {
               _controller = webViewController;
               await _loadHtmlFromAssets();
 
-              Location location = new Location();
-              bool _serviceEnabled;
-              PermissionStatus _permissionGranted;
-              LocationData _locationData;
-              _serviceEnabled = await location.serviceEnabled();
+              _location = new Location();
+
+              _serviceEnabled = await _location.serviceEnabled();
               if (!_serviceEnabled) {
-                _serviceEnabled = await location.requestService();
+                _serviceEnabled = await _location.requestService();
                 if (!_serviceEnabled) {
                   return;
                 }
               }
-              _permissionGranted = await location.hasPermission();
+              _permissionGranted = await _location.hasPermission();
               if (_permissionGranted == PermissionStatus.denied) {
-                _permissionGranted = await location.requestPermission();
+                _permissionGranted = await _location.requestPermission();
                 if (_permissionGranted != PermissionStatus.granted) {
                   return;
                 }
               }
 
-              _locationData = await location.getLocation();
-              postMessage(_controller, {
-                'lat': _locationData.latitude,
-                'lon': _locationData.longitude,
-                'alt': _locationData.altitude,
+              _location.enableBackgroundMode(enable: true);
+              _location.onLocationChanged.listen((LocationData currentLocation) {
+                locations.add({
+                  'lat': currentLocation.latitude,
+                  'lon': currentLocation.longitude,
+                  'alt': currentLocation.altitude,
+                  'time': currentLocation.time,
+                });
+                // LocationData _locationData = await _location.getLocation();
+                postMessage(_controller, {
+                  'type': 'locationchange',
+                  'payload': {
+                    'locations': locations,
+                  },
+                });
               });
             },
             javascriptMode: JavascriptMode.unrestricted,
@@ -64,41 +80,14 @@ class _WebViewExampleState extends State<WebViewExample> {
           )
         ),
         floatingActionButton: FloatingActionButton(
-            onPressed: onPressFloatingActionButton,
+          onPressed: onPressFloatingActionButton,
         ),
       )
     );
   }
 
   void onPressFloatingActionButton() async {
-    // postMessage(_controller, { 'message': 'Hello World from Flutter' });
-
-    Location location = new Location();
-    bool _serviceEnabled;
-    PermissionStatus _permissionGranted;
-    LocationData _locationData;
-    _serviceEnabled = await location.serviceEnabled();
-    if (!_serviceEnabled) {
-      _serviceEnabled = await location.requestService();
-      if (!_serviceEnabled) {
-        return;
-      }
-    }
-    _permissionGranted = await location.hasPermission();
-    if (_permissionGranted == PermissionStatus.denied) {
-      _permissionGranted = await location.requestPermission();
-      if (_permissionGranted != PermissionStatus.granted) {
-        return;
-      }
-    }
-
-    _locationData = await location.getLocation();
-    postMessage(_controller, {
-      'lat': _locationData.latitude,
-      'lon': _locationData.longitude,
-      'alt': _locationData.altitude,
-      'time': _locationData.time,
-    });
+    postMessage(_controller, { 'message': 'Hello World from Flutter' });
   }
 
   Future _loadHtmlFromAssets() async {
