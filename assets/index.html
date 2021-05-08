@@ -16,9 +16,6 @@
 
       window.addEventListener('app:message', (e) => {
         const action = e.detail;
-        // logs.push(e.detail);
-        // el.innerText = e.detail.message;
-        // el.innerText = JSON.stringify(logs);
         if (action.type === 'locationchange') {
           locations = action.payload.locations;
           el.innerText = JSON.stringify(locations);
