@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -5,9 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:location/location.dart';
-
-
-List locations = [];
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() => runApp(MaterialApp(home:WebViewExample()));
 
@@ -21,6 +20,10 @@ class _WebViewExampleState extends State<WebViewExample> {
 
   Location _location;
 
+  List locations = [];
+
+  StreamSubscription<LocationData> _locationSubscription;
+
   bool _serviceEnabled;
 
   PermissionStatus _permissionGranted;
@@ -33,48 +36,69 @@ class _WebViewExampleState extends State<WebViewExample> {
         body: SafeArea(
           child: WebView(
             // initialUrl: 'https://youtube.com',
+            initialUrl: 'http://10.0.2.2:3000',
             onWebViewCreated: (WebViewController webViewController) async {
               _controller = webViewController;
-              await _loadHtmlFromAssets();
-
-              _location = new Location();
-
-              _serviceEnabled = await _location.serviceEnabled();
-              if (!_serviceEnabled) {
-                _serviceEnabled = await _location.requestService();
-                if (!_serviceEnabled) {
-                  return;
-                }
-              }
-              _permissionGranted = await _location.hasPermission();
-              if (_permissionGranted == PermissionStatus.denied) {
-                _permissionGranted = await _location.requestPermission();
-                if (_permissionGranted != PermissionStatus.granted) {
-                  return;
-                }
-              }
-
-              _location.enableBackgroundMode(enable: true);
-              _location.onLocationChanged.listen((LocationData currentLocation) {
-                locations.add({
-                  'lat': currentLocation.latitude,
-                  'lon': currentLocation.longitude,
-                  'alt': currentLocation.altitude,
-                  'time': currentLocation.time,
-                });
-                // LocationData _locationData = await _location.getLocation();
-                postMessage(_controller, {
-                  'type': 'locationchange',
-                  'payload': {
-                    'locations': locations,
-                  },
-                });
-              });
+              // await _loadHtmlFromAssets();
             },
             javascriptMode: JavascriptMode.unrestricted,
             javascriptChannels: Set.from([
-              onMessageReceived((dynamic payload) {
-                print(payload['text']);
+              onMessageReceived((dynamic payload) async {
+                if (payload['type'] == 'startlogging') {
+                  final SharedPreferences prefs = await SharedPreferences.getInstance();
+                  _location = new Location();
+
+                  _serviceEnabled = await _location.serviceEnabled();
+                  if (!_serviceEnabled) {
+                    _serviceEnabled = await _location.requestService();
+                    if (!_serviceEnabled) {
+                      return;
+                    }
+                  }
+                  _permissionGranted = await _location.hasPermission();
+                  if (_permissionGranted == PermissionStatus.denied) {
+                    _permissionGranted = await _location.requestPermission();
+                    if (_permissionGranted != PermissionStatus.granted) {
+                      return;
+                    }
+                  }
+
+                  _location.enableBackgroundMode(enable: true);
+                  _locationSubscription =_location.onLocationChanged.listen((LocationData currentLocation) {
+                    locations.add({
+                      'timestamp': currentLocation.time,
+                      'coords': {
+                        'accuracy': currentLocation.accuracy,
+                        'altitude': currentLocation.altitude,
+                        'altitudeAccuracy': null,
+                        'heading': currentLocation.heading,
+                        'latitude': currentLocation.latitude,
+                        'longitude': currentLocation.longitude,
+                        'speed': currentLocation.speed,
+                      },
+                    });
+                    print('--- set locations ---');
+                    prefs.setString('locations', jsonEncode(locations));
+                    // LocationData _locationData = await _location.getLocation();
+                    postMessage(_controller, {
+                      'type': 'locationchange',
+                      'payload': {
+                        'locations': locations,
+                      },
+                    });
+                  });
+                } else if (payload['type'] == 'stoplogging') {
+                  _locationSubscription.cancel();
+                } else if (payload['type'] == 'getlocations') {
+                  final SharedPreferences prefs = await SharedPreferences.getInstance();
+                  locations = jsonDecode(prefs.getString('locations'));
+                  postMessage(_controller, {
+                    'type': 'locationchange',
+                    'payload': {
+                      'locations': locations,
+                    },
+                  });
+                }
               }),
             ]),
           )
