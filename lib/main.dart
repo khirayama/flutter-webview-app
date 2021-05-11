@@ -10,18 +10,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '././webviewmessage.dart';
 
-void main() => runApp(MaterialApp(home:WebViewExample()));
-class WebViewExample extends StatefulWidget {
+void main() => runApp(MaterialApp(home:WebView()));
+
+class WebView extends StatefulWidget {
   @override
-  State<StatefulWidget> createState() => _WebViewExampleState();
+  State<StatefulWidget> createState() => _WebViewState();
 }
 
-class _WebViewExampleState extends State<WebViewExample> {
+class _WebViewState extends State<WebView> {
   WebViewController _controller;
 
-  Location _location;
+  Location _location = new Location();
 
-  List locations = [];
+  List _locations = [];
 
   StreamSubscription<LocationData> _locationSubscription;
 
@@ -46,9 +47,6 @@ class _WebViewExampleState extends State<WebViewExample> {
             javascriptChannels: Set.from([
               onMessageReceived((dynamic payload) async {
                 if (payload['type'] == 'startlogging') {
-                  final SharedPreferences prefs = await SharedPreferences.getInstance();
-                  _location = new Location();
-
                   _serviceEnabled = await _location.serviceEnabled();
                   if (!_serviceEnabled) {
                     _serviceEnabled = await _location.requestService();
@@ -64,9 +62,10 @@ class _WebViewExampleState extends State<WebViewExample> {
                     }
                   }
 
+                  final SharedPreferences prefs = await SharedPreferences.getInstance();
                   _location.enableBackgroundMode(enable: true);
                   _locationSubscription =_location.onLocationChanged.listen((LocationData currentLocation) {
-                    locations.add({
+                    _locations.add({
                       'timestamp': currentLocation.time,
                       'coords': {
                         'accuracy': currentLocation.accuracy,
@@ -78,21 +77,23 @@ class _WebViewExampleState extends State<WebViewExample> {
                         'speed': currentLocation.speed,
                       },
                     });
-                    print('--- set locations ---');
-                    prefs.setString('locations', jsonEncode(locations));
-                    // LocationData _locationData = await _location.getLocation();
+                    prefs.setString('_locations', jsonEncode(_locations));
                     postMessage(_controller, {
                       'type': 'locationchange',
                       'payload': {
-                        'locations': locations,
+                        'locations': _locations,
                       },
                     });
                   });
                 } else if (payload['type'] == 'stoplogging') {
+                  final SharedPreferences prefs = await SharedPreferences.getInstance();
                   _locationSubscription.cancel();
+                  print('TODO: Save locations');
+                  _locations = [];
+                  prefs.remove('_locations');
                 } else if (payload['type'] == 'getlocations') {
                   final SharedPreferences prefs = await SharedPreferences.getInstance();
-                  locations = jsonDecode(prefs.getString('locations'));
+                  locations = jsonDecode(prefs.getString('_locations'));
                   postMessage(_controller, {
                     'type': 'locationchange',
                     'payload': {
