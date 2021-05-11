@@ -8,8 +8,9 @@ import 'package:flutter/services.dart';
 import 'package:location/location.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-void main() => runApp(MaterialApp(home:WebViewExample()));
+import '././webviewmessage.dart';
 
+void main() => runApp(MaterialApp(home:WebViewExample()));
 class WebViewExample extends StatefulWidget {
   @override
   State<StatefulWidget> createState() => _WebViewExampleState();
@@ -130,20 +131,4 @@ class _WebViewExampleState extends State<WebViewExample> {
       SystemNavigator.pop();
     }
   }       
-}
-
-JavascriptChannel onMessageReceived(Function callback) {
-  return JavascriptChannel(
-      name: "app",
-      onMessageReceived: (JavascriptMessage event) {
-        var payload = jsonDecode(event.message);
-        callback(payload);
-      },
-  );
-}
-
-void postMessage(WebViewController webViewController, dynamic payload) {
-  webViewController.evaluateJavascript('''
-      window.dispatchEvent(new CustomEvent("app:message", { detail: ${jsonEncode(payload)}}));
-      ''');
 }
