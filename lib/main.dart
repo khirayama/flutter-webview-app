@@ -93,7 +93,7 @@ class _WebViewState extends State<WebView> {
                   prefs.remove('_locations');
                 } else if (payload['type'] == 'getlocations') {
                   final SharedPreferences prefs = await SharedPreferences.getInstance();
-                  locations = jsonDecode(prefs.getString('_locations'));
+                  _locations = jsonDecode(prefs.getString('_locations'));
                   postMessage(_controller, {
                     'type': 'locationchange',
                     'payload': {
