@@ -97,7 +97,7 @@ class _WebViewState extends State<WebView> {
                   postMessage(_controller, {
                     'type': 'locationchange',
                     'payload': {
-                      'locations': locations,
+                      'locations': _locations,
                     },
                   });
                 }
